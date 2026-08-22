@@ -1,0 +1,23 @@
+{
+  "name": "Silver Bot",
+  "description": "WhatsApp MD bot (Baileys)",
+  "repository": "",
+  "keywords": ["whatsapp", "baileys", "bot", "node", "silver"],
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs.git"
+    }
+  ],
+  "env": {
+    "AUTO_START": {
+      "description": "Automatically start with saved session (no interactive menu)",
+      "required": false,
+      "value": "1"
+    },
+    "SESSION_ID": {
+      "description": "Session string (e.g. KnightBot!<base64_compressed_data>)",
+      "required": false,
+      "value": ""
+    }
+  }
+}
