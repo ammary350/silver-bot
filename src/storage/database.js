@@ -25,6 +25,7 @@ const SETTINGS_DB = path.join(DB_PATH, 'settings.json');
 const RECIPIENTS_DB = path.join(DB_PATH, 'recipients.json');
 const ANTIWORD_DB = path.join(DB_PATH, 'antiword.json');
 const AUTOCHAT_DB = path.join(DB_PATH, 'autochat.json');
+const DAILY_REPORT_DB = path.join(DB_PATH, 'dailyReport.json');
 
 if (!fs.existsSync(DB_PATH)) {
   fs.mkdirSync(DB_PATH, { recursive: true });
@@ -45,6 +46,7 @@ initDB(SETTINGS_DB, { botNumber: '', botName: 'Silver Bot' });
 initDB(RECIPIENTS_DB, { recipients: [] });
 initDB(ANTIWORD_DB, {});
 initDB(AUTOCHAT_DB, { enabled: false, time: '22:00', lastReportDate: '' });
+initDB(DAILY_REPORT_DB, {});
 
 // In-memory cache with TTL
 const cache = new Map();
@@ -411,6 +413,8 @@ const formatNumber = (num) => {
   return `+${cc} ${groups.join(' ')}`;
 };
 
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
+
 const readBlocklist = () => {
   try {
     const raw = fs.readFileSync(BLOCKLIST_DB, 'utf8');
@@ -418,6 +422,67 @@ const readBlocklist = () => {
   } catch {
     return [];
   }
+};
+
+const readDailyReport = () => {
+  try {
+    const raw = fs.readFileSync(DAILY_REPORT_DB, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+};
+
+const writeDailyReport = (data) => {
+  try {
+    fs.writeFileSync(DAILY_REPORT_DB, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const recordDailyBlocklistEntry = (number, reason = 'manual', action = 'block', groupId = '') => {
+  const normalized = normalizeNumber(number);
+  if (!normalized) return;
+  const day = getTodayKey();
+  const data = readDailyReport();
+  if (!data[day]) data[day] = { numbers: [], metrics: {} };
+  const existing = data[day].numbers.some(entry => normalizeNumber(entry.number) === normalized);
+  if (!existing) {
+    data[day].numbers.push({
+      number: normalized,
+      reason,
+      action,
+      groupId,
+      date: new Date().toISOString()
+    });
+  }
+  writeDailyReport(data);
+};
+
+const addDailyActionMetric = (action, count = 1) => {
+  if (!action) return;
+  const day = getTodayKey();
+  const data = readDailyReport();
+  if (!data[day]) data[day] = { numbers: [], metrics: {} };
+  data[day].metrics[action] = (data[day].metrics[action] || 0) + Number(count || 0);
+  writeDailyReport(data);
+};
+
+const getDailySummary = () => {
+  const day = getTodayKey();
+  const data = readDailyReport();
+  const todays = data[day] || { numbers: [], metrics: {} };
+  const numbers = Array.isArray(todays.numbers) ? todays.numbers : [];
+  const metrics = todays.metrics || {};
+  return {
+    date: day,
+    numbers,
+    metrics,
+    totalNumbers: numbers.length,
+    totalActions: Object.values(metrics).reduce((acc, value) => acc + Number(value || 0), 0)
+  };
 };
 
 const writeBlocklist = (entries) => {
@@ -455,6 +520,7 @@ const addBlockedNumber = (number) => {
     action: 'block'
   });
   writeBlocklist(entries);
+  recordDailyBlocklistEntry(normalized, 'manual', 'block', '');
   return { success: true };
 };
 
@@ -477,6 +543,7 @@ const addBlockedEntry = ({ jid, number, reason, groupId, groupName, action }) =>
   };
   entries.push(entry);
   writeBlocklist(entries);
+  recordDailyBlocklistEntry(normalized, reason || 'manual', action || 'block', groupId || '');
   return { success: true, entry };
 };
 
@@ -575,6 +642,9 @@ module.exports = {
   isNumberBlocked,
   getBlockedEntry,
   getRichBlocklist,
+  getDailySummary,
+  addDailyActionMetric,
+  recordDailyBlocklistEntry,
   normalizeNumber,
   formatNumber
 };

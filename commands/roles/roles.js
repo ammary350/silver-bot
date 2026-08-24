@@ -47,15 +47,18 @@ module.exports = {
         }
         const jid = toPnJid(value);
         if (jid && isInGroup(groupMetadata, jid)) {
-          mentions.push(jid);
-          return `  ${emoji} @${jid.split(':')[0].split('@')[0]}`;
+          const participant = findParticipant(groupMetadata.participants || [], jid) || null;
+          const mentionJid = participant?.id || participant?.jid || participant?.participant || jid;
+          if (mentionJid && !mentions.includes(mentionJid)) mentions.push(mentionJid);
+          return `  ${emoji} @${mentionJid.split(':')[0].split('@')[0]}`;
         }
         const digits = database.normalizeNumber(value);
         return `  ${emoji} ${digits ? database.formatNumber(digits) : value}`;
       };
 
       const ownerList = config.ownerNumber.map(n => holderLine('👑', n, '')).join('\n');
-      const botNum = database.getBotNumber();
+      const botNumberFromSession = sock.user?.id ? String(sock.user.id).split(':')[0].split('@')[0] : '';
+      const botNum = botNumberFromSession || database.getBotNumber();
       const botLine = botNum ? holderLine('🤖', botNum, '') : '  🤖 Not set';
       const coowners = database.getCoOwners();
       const coList = coowners.length ? coowners.map(c => holderLine('⭐', c, '')).join('\n') : '  (none)';

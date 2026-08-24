@@ -16,6 +16,7 @@ const {
   handleAntiAcc
 } = require('./protections');
 const { handleBlockControlMessage } = require('../features/blockctrl');
+const linkhub = require('../features/linkhub');
 
 const commands = loadCommands();
 
@@ -180,6 +181,9 @@ const handleMessage = async (sock, msg) => {
 
     body = (body || '').trim();
 
+    // The hub menu is intentionally available to every participant in the hub.
+    if (isGroup && body && await linkhub.sendSelectedLinks(sock, msg, body)) return;
+
     // Check antiall protection (owner only feature)
     if (isGroup) {
       const groupSettings = database.getGroupSettings(from);
@@ -208,66 +212,59 @@ const handleMessage = async (sock, msg) => {
           ''
         );
 
-        const textMentions = messageText.match(/@[\d+\s\-()~.]+/g) || [];
-        const numericMentions = messageText.match(/@\d{10,}/g) || [];
-
+        const numericMentions = messageText.match(/@\d{5,}/g) || [];
         const uniqueNumericMentions = new Set();
         numericMentions.forEach((mention) => {
           const numMatch = mention.match(/@(\d+)/);
           if (numMatch) uniqueNumericMentions.add(numMatch[1]);
         });
 
-        const mentionedJidCount = mentionedJids.length;
-        const numericMentionCount = uniqueNumericMentions.size;
-        const totalMentions = Math.max(mentionedJidCount, numericMentionCount);
+        const atCount = (messageText.match(/@/g) || []).length;
+        const mentionCount = Math.max(mentionedJids.length, uniqueNumericMentions.size, atCount);
+        const participants = groupMetadata.participants || [];
+        const mentionThreshold = Math.max(3, Math.ceil(participants.length * 0.25));
+        const isMassTagMessage = mentionCount >= 3 || uniqueNumericMentions.size >= 3 || atCount >= 3 || mentionedJids.length >= 3;
 
-        if (totalMentions >= 3) {
+        if (isMassTagMessage && (mentionCount >= mentionThreshold || mentionCount >= 3 || atCount >= 3 || uniqueNumericMentions.size >= 3)) {
           try {
-            const participants = groupMetadata.participants || [];
-            const mentionThreshold = Math.max(3, Math.ceil(participants.length * 0.5));
-            const hasManyNumericMentions = numericMentionCount >= 10 ||
-              (numericMentionCount >= 5 && numericMentionCount >= mentionThreshold);
+            const senderIsAdmin = await isAdmin(sock, sender, from, groupMetadata);
+            const senderIsOwner = perm.isOwner(sender);
 
-            if (totalMentions >= mentionThreshold || hasManyNumericMentions) {
-              const senderIsAdmin = await isAdmin(sock, sender, from, groupMetadata);
-              const senderIsOwner = perm.isOwner(sender);
+            if (!senderIsAdmin && !senderIsOwner) {
+              const action = (groupSettings.antitagAction || 'delete').toLowerCase();
 
-              if (!senderIsAdmin && !senderIsOwner) {
-                const action = (groupSettings.antitagAction || 'delete').toLowerCase();
-
-                if (action === 'delete') {
-                  try {
-                    await sock.sendMessage(from, { delete: msg.key });
-                    await sock.sendMessage(from, {
-                      text: '⚠️ *Tagall Detected!*',
-                      mentions: [sender]
-                    }, { quoted: msg });
-                  } catch (e) {
-                    console.error('Failed to delete tagall message:', e);
-                  }
-                } else if (action === 'kick') {
-                  try {
-                    await sock.sendMessage(from, { delete: msg.key });
-                  } catch (e) {
-                    console.error('Failed to delete tagall message:', e);
-                  }
-
-                  const botIsAdmin = await isBotAdmin(sock, from, groupMetadata);
-                  if (botIsAdmin) {
-                    try {
-                      await sock.groupParticipantsUpdate(from, [sender], 'remove');
-                    } catch (e) {
-                      console.error('Failed to kick for antitag:', e);
-                    }
-                    const usernames = [`@${sender.split('@')[0]}`];
-                    await sock.sendMessage(from, {
-                      text: `🚫 *Antitag Detected!*\n\n${usernames.join(', ')} has been kicked for tagging all members.`,
-                      mentions: [sender],
-                    }, { quoted: msg });
-                  }
+              if (action === 'delete') {
+                try {
+                  await sock.sendMessage(from, { delete: msg.key });
+                  await sock.sendMessage(from, {
+                    text: '⚠️ *Tagall Detected!*',
+                    mentions: [sender]
+                  }, { quoted: msg });
+                } catch (e) {
+                  console.error('Failed to delete tagall message:', e);
                 }
-                return;
+              } else if (action === 'kick') {
+                try {
+                  await sock.sendMessage(from, { delete: msg.key });
+                } catch (e) {
+                  console.error('Failed to delete tagall message:', e);
+                }
+
+                const botIsAdmin = await isBotAdmin(sock, from, groupMetadata);
+                if (botIsAdmin) {
+                  try {
+                    await sock.groupParticipantsUpdate(from, [sender], 'remove');
+                  } catch (e) {
+                    console.error('Failed to kick for antitag:', e);
+                  }
+                  const usernames = [`@${sender.split('@')[0]}`];
+                  await sock.sendMessage(from, {
+                    text: `🚫 *Antitag Detected!*\n\n${usernames.join(', ')} has been kicked for tagging all members.`,
+                    mentions: [sender],
+                  }, { quoted: msg });
+                }
               }
+              return;
             }
           } catch (e) {
             console.error('Error during anti-tag enforcement:', e);
@@ -276,13 +273,10 @@ const handleMessage = async (sock, msg) => {
       }
     }
 
-    // Anti-contact protection — enabled per group via .antiacc on/off
-    if (isGroup && content) {
+    // Anti-contact protection is automatic in groups and private chats.
+    if (content) {
       try {
-        const gs = database.getGroupSettings(from);
-        if (gs.antiacc) {
-          await handleAntiAcc(sock, msg, from, sender, groupMetadata, content);
-        }
+        await handleAntiAcc(sock, msg, from, sender, groupMetadata, content);
       } catch (e) {
         console.error('[AntiAcc handler error]', e.message);
       }
@@ -336,6 +330,19 @@ const handleMessage = async (sock, msg) => {
     // Get command
     const command = commands.get(commandName);
     if (!command) return;
+
+    // `links` is the one command whose permission is controlled by hub location.
+    if (commandName === 'links' && isGroup && linkhub.isHub(from)) {
+      return command.execute(sock, msg, args, {
+        from,
+        sender,
+        isGroup,
+        groupMetadata,
+        commandName,
+        reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
+        react: (emoji) => sock.sendMessage(from, { react: { text: emoji, key: msg.key } })
+      });
+    }
 
     // ── Mode Context Check ──
     // Private mode: bot only responds to registered role-holders
@@ -400,6 +407,7 @@ const handleMessage = async (sock, msg) => {
       isAdmin: await isAdmin(sock, sender, from, groupMetadata),
       isBotAdmin: await isBotAdmin(sock, from, groupMetadata),
       isBotAdminApproved: perm.isBotAdminApproved(sender),
+      commandName,
       reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
       react: (emoji) => sock.sendMessage(from, { react: { text: emoji, key: msg.key } })
     });

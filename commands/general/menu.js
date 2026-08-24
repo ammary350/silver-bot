@@ -4,17 +4,17 @@ const menuSections = {
   general: {
     icon: '🧭',
     label: 'عام',
-    cmds: ['menu', 'ping', 'owner', 'alive', 'status', 'uptime', 'sticker', 'tts', 'qr', 'attp', 'getpp', 'viewonce', 'chat']
+    cmds: ['menu', 'ping', 'owner', 'alive', 'status', 'uptime', 'sticker', 'tts', 'qr', 'attp', 'getpp', 'viewonce', 'chat', 'botstats', 'astats', 'setstatsgroup']
   },
   roles: {
     icon: '👤',
     label: 'الرتب',
-    cmds: ['addadm', 'deladm', 'addco', 'delco', 'roles']
+    cmds: ['addadm', 'deladm', 'addco', 'delco', 'roles', 'resetroles']
   },
   admin: {
     icon: '🛡️',
     label: 'الإدارة',
-    cmds: ['kick', 'promote', 'demote', 'mute', 'unmute', 'warn', 'resetwarn', 'tagall', 'hidetag', 'antilink', 'antitag', 'antiacc', 'welcome', 'setwelcome', 'goodbye', 'setgoodbye', 'clean', 'delete', 'grouplink', 'ginfo', 'setrules', 'reqs', 'approveall', 'setreqmsg']
+    cmds: ['kick', 'promote', 'demote', 'mute', 'unmute', 'warn', 'resetwarn', 'tagall', 'hidetag', 'antilink', 'antitag', 'antiacc', 'welcome', 'setwelcome', 'goodbye', 'setgoodbye', 'clean', 'delete', 'grouplink', 'ginfo', 'setrules', 'reqs', 'approveall', 'setreqmsg', 'linksetup', 'links', 'linkhide']
   },
   protection: {
     icon: '🔒',
@@ -24,7 +24,7 @@ const menuSections = {
   owner: {
     icon: '👑',
     label: 'المالك',
-    cmds: ['ban', 'mode', 'broadcast', 'restart', 'disconnect', 'setprefix', 'setbotname', 'setbotpp', 'setmenuimage', 'anticall', 'autoreact', 'update', 'addblock', 'delblock', 'blocks', 'check']
+    cmds: ['ban', 'in', 'mode', 'broadcast', 'restart', 'disconnect', 'setprefix', 'setbotname', 'setbotpp', 'setmenuimage', 'anticall', 'autoreact', 'update', 'addblock', 'delblock', 'blocks', 'check', 'dailyreport', 'resetroles']
   },
   ai: {
     icon: '🤖',

@@ -259,8 +259,7 @@ const handlePromotionDetection = async (sock, update, groupSettings) => {
   }
 };
 
-// Contact-card (vCard) anti-spam — per-group, sender-targeted enforcement.
-// Gated per group by .antiacc on/off (messageHandler checks the setting).
+// Contact-card anti-spam — automatic in private chats and admin-managed groups.
 // Targets ONLY the message sender in the current group — the number inside
 // the contact card is never used as a removal target.
 const handleAntiAcc = async (sock, msg, from, sender, groupMetadata, content) => {
@@ -283,16 +282,10 @@ const handleAntiAcc = async (sock, msg, from, sender, groupMetadata, content) =>
       }
     }
 
-    // 1. Delete only the triggering contact-card message
-    try {
-      await sock.sendMessage(from, { delete: msg.key });
-    } catch (e) {
-      // May fail if bot not admin — continue
-    }
+    const isGroup = from && from.endsWith('@g.us');
+    const botIsAdmin = isGroup ? await isBotAdmin(sock, from, groupMetadata) : true;
 
-    const botIsAdmin = await isBotAdmin(sock, from, groupMetadata);
-    if (!botIsAdmin) {
-      // No crash, no false success, no other-group scan — report to owners only
+    if (isGroup && !botIsAdmin) {
       console.log(`[vCard] Contact card in group ${from}: bot is not admin, skipped enforcement (sender ${maskNumber(sender)})`);
       try {
         const owners = Array.isArray(config.ownerNumber) ? config.ownerNumber : [config.ownerNumber];
@@ -307,7 +300,23 @@ const handleAntiAcc = async (sock, msg, from, sender, groupMetadata, content) =>
       return;
     }
 
-    // 2. Confirm the sender is still a participant in this same group
+    // Delete only the triggering contact-card message.
+    try {
+      await sock.sendMessage(from, { delete: msg.key });
+    } catch (e) {
+      // Deletion can fail in private chats when the message is already gone.
+    }
+
+    if (!isGroup) {
+      try {
+        await sock.updateBlockStatus(sender, 'block');
+      } catch (e) {
+        console.error('[vCard] Failed to block private sender:', e.message);
+      }
+      return;
+    }
+
+    // Confirm the sender is still a participant in this same group.
     const stillParticipant = findParticipant(groupMetadata?.participants || [], sender);
 
     // 3. Remove only the sender from this same group

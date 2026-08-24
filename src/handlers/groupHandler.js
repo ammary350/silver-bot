@@ -175,7 +175,7 @@ const handleGroupUpdate = async (sock, update) => {
         try {
           const { displayName, profilePicUrl } = await resolveParticipantInfo(participantJid, participantNumber);
           const groupName = groupMetadata.subject || 'the group';
-          const goodbyeMsg = `Goodbye @${displayName} 👋 We will never miss you!`;
+          const goodbyeMsg = `Goodbye @${displayName} 👋`;
 
           const apiUrl = `https://api.some-random-api.com/welcome/img/7/gaming4?type=leave&textcolor=white&username=${encodeURIComponent(displayName)}&guildName=${encodeURIComponent(groupName)}&memberCount=${groupMetadata.participants.length}&avatar=${encodeURIComponent(profilePicUrl)}`;
           const imageResponse = await axios.get(apiUrl, { responseType: 'arraybuffer' });
@@ -188,7 +188,7 @@ const handleGroupUpdate = async (sock, update) => {
           });
         } catch (goodbyeError) {
           console.error('Goodbye error:', goodbyeError);
-          const goodbyeMsg = `Goodbye @${participantNumber} 👋 We will never miss you! 💀`;
+          const goodbyeMsg = `Goodbye @${participantNumber} 👋`;
 
           await sock.sendMessage(id, {
             text: goodbyeMsg,

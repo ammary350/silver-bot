@@ -26,7 +26,7 @@ const purgeExpired = () => {
 
 module.exports = {
   name: 'resetroles',
-  aliases: ['reset-roles', 'clearroles'],
+  aliases: ['reset-roles', 'clearroles', 'resetall'],
   category: 'owner',
   description: 'Reset all role assignments (co-owners, bot admins) — owners preserved (owner only)',
   usage: '.resetroles | .resetroles confirm',
@@ -75,10 +75,10 @@ module.exports = {
       // groups are never touched.
 
       return extra.reply(
-        '✅ Roles reset.\n' +
-        '👑 Owners were preserved.\n' +
-        '⭐ Co-owners cleared.\n' +
-        '🛡️ Bot admins cleared.'
+        '✅ Roles reset. تم تصفير جميع الأدوار بنجاح.\n' +
+        '👑 Owners were preserved — تم الحفاظ على المالكين المحددين.\n' +
+        '⭐ Co-owners cleared — تم حذف جميع المالكين المساعدين.\n' +
+        '🛡️ Bot admins cleared — تم حذف جميع مشرفي البوت.'
       );
     } catch (e) {
       await extra.reply(`❌ Error: ${e.message}`);
