@@ -6,7 +6,7 @@ module.exports = {
   category: 'owner',
   description: 'Remove a number from the global blocklist',
   usage: '.delblock <number>',
-  coOwnerOnly: true,
+  ownerOnly: true,
 
   async execute(sock, msg, args, extra) {
     try {

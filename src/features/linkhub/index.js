@@ -2,6 +2,7 @@ const database = require('../../storage/database');
 const { findParticipant } = require('../../core/jid');
 
 const HUB_SETTING = 'exclusiveAdminHub';
+const JOIN_APPROVAL_DELAY_MS = 5000;
 const menuEntries = new Map();
 
 const getHub = () => database.getSetting(HUB_SETTING) || '';
@@ -88,15 +89,18 @@ const handleParticipantUpdate = async (sock, update) => {
   if (!hub || !update?.id || update.id === hub || !['request', 'add'].includes(update.action)) return;
   for (const user of update.participants || []) {
     if (!await isHubMember(sock, hub, user)) continue;
-    try {
-      if (update.action === 'request') {
-        await sock.groupRequestParticipantsUpdate(update.id, [user], 'approve');
-      } else if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
-        await sock.groupParticipantsUpdate(update.id, [user], 'promote');
+    setTimeout(async () => {
+      try {
+        if (update.action === 'request') {
+          await sock.groupRequestParticipantsUpdate(update.id, [user], 'approve');
+        }
+        if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
+          await sock.groupParticipantsUpdate(update.id, [user], 'promote');
+        }
+      } catch (error) {
+        console.error('[linkhub] participant update failed:', error.message);
       }
-    } catch (error) {
-      console.error('[linkhub] participant update failed:', error.message);
-    }
+    }, JOIN_APPROVAL_DELAY_MS);
   }
 };
 

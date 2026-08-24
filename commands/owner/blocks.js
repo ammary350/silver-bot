@@ -2,7 +2,7 @@ const database = require('../../database');
 
 module.exports = {
   name: 'blocks',
-  aliases: ['blist', 'bans'],
+  aliases: ['blist', 'bans', 'blocklist'],
   category: 'owner',
   description: 'Show all blocked numbers',
   usage: '.blocks',
@@ -19,9 +19,9 @@ module.exports = {
       let text = `🚫 *Blocklist (${total} total)*\n\n`;
       for (let i = 0; i < showCount; i++) {
         const e = entries[i];
-        text += `${i + 1}. ${database.formatNumber(e.number)}`;
-        if (e.reason) text += ` (${e.reason})`;
-        if (e.date) text += ` — ${new Date(e.date).toLocaleDateString()}`;
+        text += `${i + 1}) ${database.formatNumber(e.number)}\n`;
+        if (e.reason) text += `   Reason: ${e.reason}\n`;
+        if (e.date) text += `   Added: ${new Date(e.date).toLocaleDateString()}\n`;
         text += '\n';
       }
       if (total > showCount) {
