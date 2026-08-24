@@ -45,36 +45,36 @@ module.exports = {
   aliases: ['groupstats'],
   category: 'general',
   async execute(sock, msg, args, extra) {
-    if (extra.isGroup && !(await isBotAdmin(sock, extra.from, extra.groupMetadata))) {
-      return extra.reply('❌ عذراً، يجب أن أكون مشرفاً (Admin) في هذه المجموعة لجلب الإحصائيات!');
-    }
-
-    let groups;
     try {
-      groups = await getTrackedGroups(sock);
+      if (extra.isGroup && !(await isBotAdmin(sock, extra.from, extra.groupMetadata))) {
+        return extra.reply('❌ عذراً، يجب أن أكون مشرفاً (Admin) في هذه المجموعة لجلب الإحصائيات!');
+      }
+
+      const groups = await getTrackedGroups(sock);
+      const list = Array.isArray(groups) ? groups : [];
+      const results = await Promise.allSettled(list.map(async group => ({
+        group,
+        valid: await isValidBotGroup(sock, group)
+      })));
+      const validGroups = results
+        .filter(result => result.status === 'fulfilled' && result.value.valid)
+        .map(result => result.value.group);
+
+      const lines = validGroups.map(group => {
+        let settings = {};
+        try {
+          settings = database.getGroupSettings(group.id) || {};
+        } catch (error) {
+          console.error('[botstats] group settings unavailable:', error.message);
+        }
+        const icon = key => settings[key] ? '✅' : '❌';
+        return `• ${group.subject || group.id}\n  Anti-Link ${icon('antilink')} | Anti-Spam ${icon('antispam')} | Anti-Tag ${icon('antitag')} | Anti-Word ${icon('antiword')}\n  Anti-Contact ✅ (global) | Anti-Delete ${icon('antidelete')}`;
+      });
+
+      return extra.reply(`📊 *إحصائيات البوت*\n\nعدد المجموعات الصالحة: ${validGroups.length}\n\n${lines.join('\n') || 'لا توجد مجموعات صالحة.'}`);
     } catch (error) {
+      console.error('[botstats error]', error.message);
       return extra.reply(`❌ تعذر جلب إحصائيات المجموعات: ${error.message}`);
     }
-    const list = Array.isArray(groups) ? groups : [];
-    const results = await Promise.allSettled(list.map(async group => ({
-      group,
-      valid: await isValidBotGroup(sock, group)
-    })));
-    const validGroups = results
-      .filter(result => result.status === 'fulfilled' && result.value.valid)
-      .map(result => result.value.group);
-
-    const lines = validGroups.map(group => {
-      let settings = {};
-      try {
-        settings = database.getGroupSettings(group.id) || {};
-      } catch (error) {
-        console.error('[botstats] group settings unavailable:', error.message);
-      }
-      const icon = key => settings[key] ? '✅' : '❌';
-      return `• ${group.subject || group.id}\n  Anti-Link ${icon('antilink')} | Anti-Spam ${icon('antispam')} | Anti-Tag ${icon('antitag')} | Anti-Word ${icon('antiword')}\n  Anti-Contact ✅ (global) | Anti-Delete ${icon('antidelete')}`;
-    });
-
-    return extra.reply(`📊 *إحصائيات البوت*\n\nعدد المجموعات الصالحة: ${validGroups.length}\n\n${lines.join('\n') || 'لا توجد مجموعات صالحة.'}`);
   }
 };

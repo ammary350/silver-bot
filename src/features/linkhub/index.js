@@ -2,9 +2,7 @@ const database = require('../../storage/database');
 const { findParticipant } = require('../../core/jid');
 
 const HUB_SETTING = 'exclusiveAdminHub';
-const JOIN_APPROVAL_DELAY_MS = 5000;
 const menuEntries = new Map();
-const pendingApprovals = new Map();
 
 const getHub = () => database.getSetting(HUB_SETTING) || '';
 
@@ -108,27 +106,16 @@ const handleParticipantUpdate = async (sock, update) => {
   for (const user of update.participants || []) {
     const userJid = typeof user === 'string' ? user : (user?.id || user?.jid || user?.participant || '');
     if (!userJid || !await isHubMember(sock, hub, userJid)) continue;
-    const approvalKey = `${update.id}:${userJid}`;
-    if (!userJid || pendingApprovals.has(approvalKey)) continue;
-    const timer = setTimeout(async () => {
-      pendingApprovals.delete(approvalKey);
-      try {
-        if (update.action === 'request') {
-          await sock.groupRequestParticipantsUpdate(update.id, [userJid], 'approve');
-        }
-      } catch (error) {
-        console.error('[linkhub] join approval failed:', error.message);
+    try {
+      if (update.action === 'request') {
+        await sock.groupRequestParticipantsUpdate(update.id, [userJid], 'approve');
       }
-      try {
-        if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
-          await sock.groupParticipantsUpdate(update.id, [userJid], 'promote');
-        }
-      } catch (error) {
-        console.error('[linkhub] join promotion failed:', error.message);
+      if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
+        await sock.groupParticipantsUpdate(update.id, [userJid], 'promote');
       }
-    }, JOIN_APPROVAL_DELAY_MS);
-    timer.unref?.();
-    pendingApprovals.set(approvalKey, timer);
+    } catch (error) {
+      console.error('[linkhub] participant update failed:', error.message);
+    }
   }
 };
 

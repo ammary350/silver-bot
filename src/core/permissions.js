@@ -6,9 +6,9 @@ const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
 
 const isOwner = (sender) => {
   if (!sender) return false;
-  const configuredOwners = Array.isArray(config.ownerNumber)
-    ? config.ownerNumber
-    : [config.ownerNumber];
+  const configuredOwners = Array.isArray(global.owner) && global.owner.length
+    ? global.owner
+    : (Array.isArray(config.ownerNumber) ? config.ownerNumber : [config.ownerNumber]);
   const senderIds = [sender, ...jid.buildComparableIds(sender)];
   const senderNumbers = new Set(senderIds.map(digitsOnly).filter(Boolean));
   return configuredOwners

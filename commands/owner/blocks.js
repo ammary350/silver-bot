@@ -24,21 +24,40 @@ module.exports = {
 
       const start = (page - 1) * pageSize;
       const pageEntries = entries.slice(start, start + pageSize);
+      const mentions = [];
       const lines = pageEntries.map((entry, index) => {
         const storedId = String(entry.jid || entry.number || '');
         const isGroup = storedId.includes('@g.us');
         const digits = storedId.replace(/\D/g, '');
-        const target = digits ? (isGroup ? `[Group] ${digits}` : `wa.me/${digits}`) : '[Unknown]';
+        const target = digits ? (isGroup ? `[Group] ${digits}` : `+${formatInternationalNumber(digits)} (wa.me/${digits})`) : '[Unknown]';
+        if (digits && !isGroup) mentions.push(`${digits}@s.whatsapp.net`);
         const details = [entry.reason, entry.date ? new Date(entry.date).toLocaleDateString() : '']
           .filter(Boolean)
           .join(' | ');
         return `${start + index + 1}. ${target}${details ? `\n   ${details}` : ''}`;
       });
 
-      await extra.reply(`🚫 *Blocklist*\n\n${lines.join('\n\n')}\n\nPage ${page} of ${totalPages} | Total: ${total}`);
+      await sock.sendMessage(extra.from, {
+        text: `🚫 *Blocklist*\n\n${lines.join('\n\n')}\n\nPage ${page} of ${totalPages} | Total: ${total}`,
+        mentions
+      }, { quoted: msg });
     } catch (e) {
       console.error('[blocks error]', e.message);
       await extra.reply(`❌ Error: ${e.message}`);
     }
   }
 };
+
+function formatInternationalNumber(digits) {
+  if (digits.length <= 3) return digits;
+  const groups = [];
+  let remaining = digits;
+  const suffixes = [4, 3, 2];
+  for (const size of suffixes) {
+    if (remaining.length <= size) break;
+    groups.unshift(remaining.slice(-size));
+    remaining = remaining.slice(0, -size);
+  }
+  if (remaining) groups.unshift(remaining);
+  return groups.join(' ');
+}

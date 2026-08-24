@@ -6,7 +6,14 @@ module.exports = {
   category: 'admin',
   groupOnly: true,
   async execute(sock, msg, args, extra) {
-    if (!linkhub.isHub(extra.from)) return;
-    return linkhub.createMenu(sock, extra.from, extra.reply);
+    try {
+      if (!linkhub.isHub(extra.from)) {
+        return extra.reply('❌ This command can only be used in the configured link-setup group.');
+      }
+      return await linkhub.createMenu(sock, extra.from, extra.reply);
+    } catch (error) {
+      console.error('[links error]', error.message);
+      return extra.reply(`❌ Unable to load group links: ${error.message}`);
+    }
   }
 };
