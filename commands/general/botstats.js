@@ -1,5 +1,6 @@
 const database = require('../../src/storage/database');
 const { isBotAdmin } = require('../../src/features/groups/metadata');
+const { getTrackedGroups } = require('../../src/features/linkhub');
 
 const isValidBotGroup = async (sock, group) => {
   if (!group || !group.id) return false;
@@ -50,11 +51,11 @@ module.exports = {
 
     let groups;
     try {
-      groups = await sock.groupFetchAllParticipating();
+      groups = await getTrackedGroups(sock);
     } catch (error) {
       return extra.reply(`❌ تعذر جلب إحصائيات المجموعات: ${error.message}`);
     }
-    const list = Object.values(groups || {});
+    const list = Array.isArray(groups) ? groups : [];
     const results = await Promise.allSettled(list.map(async group => ({
       group,
       valid: await isValidBotGroup(sock, group)

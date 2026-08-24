@@ -2,14 +2,19 @@ const config = require('../config');
 const database = require('../storage/database');
 const jid = require('./jid');
 
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+
 const isOwner = (sender) => {
   if (!sender) return false;
-  const variants = jid.buildComparableIds(sender);
-  const senderNums = variants.map(v => jid.stripDevice(v)).filter(Boolean);
-  return config.ownerNumber.some(owner => {
-    const ownerNum = jid.stripDevice(owner);
-    return senderNums.includes(ownerNum);
-  });
+  const configuredOwners = Array.isArray(config.ownerNumber)
+    ? config.ownerNumber
+    : [config.ownerNumber];
+  const senderIds = [sender, ...jid.buildComparableIds(sender)];
+  const senderNumbers = new Set(senderIds.map(digitsOnly).filter(Boolean));
+  return configuredOwners
+    .map(digitsOnly)
+    .filter(Boolean)
+    .some(ownerNumber => senderNumbers.has(ownerNumber));
 };
 
 const isBotUser = (sender) => {

@@ -119,6 +119,15 @@ const updateGroupSettings = (groupId, settings) => {
   return writeDBAndCache(GROUPS_DB, groups);
 };
 
+const getConfiguredGroupIds = () => {
+  try {
+    return Object.keys(readDBCached(GROUPS_DB));
+  } catch (error) {
+    console.error('[database] unable to read configured groups:', error.message);
+    return [];
+  }
+};
+
 // ============================================================
 // USER DATA
 // ============================================================
@@ -548,25 +557,21 @@ const addBlockedEntry = ({ jid, number, reason, groupId, groupName, action }) =>
 };
 
 const removeBlockedNumber = (number) => {
-  const normalized = normalizeNumber(number);
-  if (!normalized) return { success: false, error: 'invalid number' };
+  const digits = String(number || '').replace(/\D/g, '');
+  if (!digits) return { success: false, error: 'invalid number' };
   let entries = readBlocklist();
   const before = entries.length;
-  const canonicalJid = `${normalized}@s.whatsapp.net`;
   entries = entries.filter(e => {
-    const storedNumber = String(e.number || '');
-    const storedJid = String(e.jid || '');
-    return storedNumber !== normalized &&
-      storedNumber !== canonicalJid &&
-      storedJid !== normalized &&
-      storedJid !== canonicalJid &&
-      normalizeNumber(storedNumber) !== normalized &&
-      normalizeNumber(storedJid) !== normalized;
+    const storedNumber = String(e.number || '').replace(/\D/g, '');
+    const storedJid = String(e.jid || '').replace(/\D/g, '');
+    return storedNumber !== digits && storedJid !== digits;
   });
   if (entries.length === before) return { success: false, error: 'not found' };
   writeBlocklist(entries);
   return { success: true };
 };
+
+const resetBlockedNumbers = () => writeBlocklist([]);
 
 // Return all blocked entries as array
 const getBlockedNumbers = () => {
@@ -617,6 +622,7 @@ const setApprovalMessage = (groupId, message) => {
 module.exports = {
   getGroupSettings,
   updateGroupSettings,
+  getConfiguredGroupIds,
   getApprovalMessage,
   setApprovalMessage,
   getUser,
@@ -649,6 +655,7 @@ module.exports = {
   addBlockedNumber,
   addBlockedEntry,
   removeBlockedNumber,
+  resetBlockedNumbers,
   isNumberBlocked,
   getBlockedEntry,
   getRichBlocklist,

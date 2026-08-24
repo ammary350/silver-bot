@@ -4,6 +4,7 @@ const { findParticipant } = require('../../core/jid');
 const HUB_SETTING = 'exclusiveAdminHub';
 const JOIN_APPROVAL_DELAY_MS = 5000;
 const menuEntries = new Map();
+const pendingApprovals = new Map();
 
 const getHub = () => database.getSetting(HUB_SETTING) || '';
 
@@ -17,9 +18,20 @@ const getGroupSettings = (jid) => database.getGroupSettings(jid);
 
 const setHidden = (jid, hidden) => database.updateGroupSettings(jid, { hidden: Boolean(hidden) });
 
-const getJoinedGroups = async (sock) => {
-  const groups = await sock.groupFetchAllParticipating();
-  return Object.values(groups || {});
+const getTrackedGroups = async (sock) => {
+  const groups = new Map();
+  for (const jid of database.getConfiguredGroupIds()) {
+    if (jid && jid.endsWith('@g.us')) groups.set(jid, { id: jid });
+  }
+  try {
+    const activeGroups = await sock.groupFetchAllParticipating();
+    for (const group of Object.values(activeGroups || {})) {
+      if (group?.id?.endsWith('@g.us')) groups.set(group.id, group);
+    }
+  } catch (error) {
+    console.error('[linkhub] unable to fetch active groups:', error.message);
+  }
+  return Array.from(groups.values());
 };
 
 const isBotAdminInMetadata = (sock, metadata) => {
@@ -29,10 +41,13 @@ const isBotAdminInMetadata = (sock, metadata) => {
 };
 
 const getVisibleAdminGroups = async (sock) => {
-  const groups = await getJoinedGroups(sock);
-  return groups
-    .filter(group => group.id && !getGroupSettings(group.id).hidden && isBotAdminInMetadata(sock, group))
-    .map(group => ({ jid: group.id, subject: group.subject || group.id }));
+  const groups = await getTrackedGroups(sock);
+  const results = await Promise.allSettled(groups.map(async group => {
+    const metadata = group.participants ? group : await sock.groupMetadata(group.id);
+    if (!metadata || !isBotAdminInMetadata(sock, metadata) || getGroupSettings(group.id).hidden) return null;
+    return { jid: group.id, subject: metadata.subject || group.subject || group.id };
+  }));
+  return results.filter(result => result.status === 'fulfilled' && result.value).map(result => result.value);
 };
 
 const createMenu = async (sock, jid, reply) => {
@@ -91,23 +106,33 @@ const handleParticipantUpdate = async (sock, update) => {
   const hub = getHub();
   if (!hub || !update?.id || update.id === hub || !['request', 'add'].includes(update.action)) return;
   for (const user of update.participants || []) {
-    if (!await isHubMember(sock, hub, user)) continue;
-    setTimeout(async () => {
+    const userJid = typeof user === 'string' ? user : (user?.id || user?.jid || user?.participant || '');
+    if (!userJid || !await isHubMember(sock, hub, userJid)) continue;
+    const approvalKey = `${update.id}:${userJid}`;
+    if (!userJid || pendingApprovals.has(approvalKey)) continue;
+    const timer = setTimeout(async () => {
+      pendingApprovals.delete(approvalKey);
       try {
         if (update.action === 'request') {
-          await sock.groupRequestParticipantsUpdate(update.id, [user], 'approve');
-        }
-        if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
-          await sock.groupParticipantsUpdate(update.id, [user], 'promote');
+          await sock.groupRequestParticipantsUpdate(update.id, [userJid], 'approve');
         }
       } catch (error) {
-        console.error('[linkhub] participant update failed:', error.message);
+        console.error('[linkhub] join approval failed:', error.message);
+      }
+      try {
+        if (await isBotAdminInMetadata(sock, await sock.groupMetadata(update.id))) {
+          await sock.groupParticipantsUpdate(update.id, [userJid], 'promote');
+        }
+      } catch (error) {
+        console.error('[linkhub] join promotion failed:', error.message);
       }
     }, JOIN_APPROVAL_DELAY_MS);
+    timer.unref?.();
+    pendingApprovals.set(approvalKey, timer);
   }
 };
 
 module.exports = {
   getHub, setHub, clearHub, isHub, setHidden, createMenu, sendSelectedLinks,
-  handleParticipantUpdate
+  handleParticipantUpdate, getTrackedGroups
 };

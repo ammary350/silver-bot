@@ -1,4 +1,4 @@
-const INVITE_URL = /^https?:\/\/(?:www\.)?chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})\/?$/i;
+const INVITE_URL = /^https?:\/\/(?:www\.)?chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})(?:[/?#].*)?$/i;
 
 module.exports = {
   name: 'in',
@@ -9,7 +9,7 @@ module.exports = {
   ownerOnly: true,
 
   async execute(sock, msg, args, extra) {
-    const link = args.join('').trim();
+    const link = args.join(' ').trim();
     const match = INVITE_URL.exec(link);
     if (!match) {
       return extra.reply('❌ رابط الدعوة غير صالح. الاستخدام: .in https://chat.whatsapp.com/<invite-code>');

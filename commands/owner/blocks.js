@@ -5,7 +5,7 @@ module.exports = {
   aliases: ['blist', 'bans', 'blocklist'],
   category: 'owner',
   description: 'Show all blocked numbers',
-  usage: '.blocks',
+  usage: '.blocks [page]',
   coOwnerOnly: true,
 
   async execute(sock, msg, args, extra) {
@@ -14,24 +14,28 @@ module.exports = {
       if (entries.length === 0) {
         return extra.reply('📋 Blocklist is empty.');
       }
+      const pageInput = args[0] || '1';
+      const page = /^\d+$/.test(pageInput) ? Number(pageInput) : 1;
+      if (!Number.isInteger(page) || page < 1) return extra.reply('❌ Page must be a positive number.');
+      const pageSize = 10;
       const total = entries.length;
-      const showCount = Math.min(total, 30);
-      let text = `🚫 *Blocklist (${total} total)*\n\n`;
-      for (let i = 0; i < showCount; i++) {
-        const e = entries[i];
-        const storedId = String(e.jid || e.number || '');
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (page > totalPages) return extra.reply(`❌ Page ${page} does not exist. Choose a page from 1 to ${totalPages}.`);
+
+      const start = (page - 1) * pageSize;
+      const pageEntries = entries.slice(start, start + pageSize);
+      const lines = pageEntries.map((entry, index) => {
+        const storedId = String(entry.jid || entry.number || '');
         const isGroup = storedId.includes('@g.us');
-        const digits = storedId.replace(/[^0-9]/g, '');
-        const displayNumber = digits ? `+${digits}` : storedId;
-        text += `${i + 1}) ${isGroup ? '[Group] ' : ''}${displayNumber}\n`;
-        if (e.reason) text += `   Reason: ${e.reason}\n`;
-        if (e.date) text += `   Added: ${new Date(e.date).toLocaleDateString()}\n`;
-        text += '\n';
-      }
-      if (total > showCount) {
-        text += `\n... and ${total - showCount} more entries.\nUse .check <number> to look up a specific number.`;
-      }
-      await extra.reply(text.trim());
+        const digits = storedId.replace(/\D/g, '');
+        const target = digits ? (isGroup ? `[Group] ${digits}` : `wa.me/${digits}`) : '[Unknown]';
+        const details = [entry.reason, entry.date ? new Date(entry.date).toLocaleDateString() : '']
+          .filter(Boolean)
+          .join(' | ');
+        return `${start + index + 1}. ${target}${details ? `\n   ${details}` : ''}`;
+      });
+
+      await extra.reply(`🚫 *Blocklist*\n\n${lines.join('\n\n')}\n\nPage ${page} of ${totalPages} | Total: ${total}`);
     } catch (e) {
       console.error('[blocks error]', e.message);
       await extra.reply(`❌ Error: ${e.message}`);
