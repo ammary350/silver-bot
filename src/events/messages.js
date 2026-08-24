@@ -12,9 +12,11 @@ setInterval(() => {
 
 function registerMessagesEvents(sock, ctx) {
   sock.ev.on('messages.upsert', ({ messages, type }) => {
-    if (type !== 'notify') return;
+    try {
+      if (type !== 'notify' || !Array.isArray(messages)) return;
 
-    for (const msg of messages) {
+      for (const msg of messages) {
+        try {
       if (!msg.message || !msg.key?.id) continue;
 
       const from = msg.key.remoteJid;
@@ -36,7 +38,12 @@ function registerMessagesEvents(sock, ctx) {
       processedMessages.add(msgId);
 
       if (msg.key && msg.key.id) {
-        if (!ctx.store.messages.has(from)) ctx.store.messages.set(from, new Map());
+        if (!ctx.store.messages.has(from)) {
+          ctx.store.messages.set(from, new Map());
+          while (ctx.store.messages.size > (ctx.store.maxChats || 500)) {
+            ctx.store.messages.delete(ctx.store.messages.keys().next().value);
+          }
+        }
         const chatMsgs = ctx.store.messages.get(from);
         chatMsgs.set(msg.key.id, msg);
         if (chatMsgs.size > ctx.store.maxPerChat) {
@@ -68,6 +75,12 @@ function registerMessagesEvents(sock, ctx) {
           } catch (error) {}
         }
       });
+        } catch (error) {
+          console.error('[events] message dispatch failed:', error.message);
+        }
+      }
+    } catch (error) {
+      console.error('[events] messages.upsert failed:', error.message);
     }
   });
 

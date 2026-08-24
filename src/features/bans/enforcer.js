@@ -12,7 +12,6 @@ const perm = require('../../core/permissions');
 const { getGroupMetadata, isBotAdmin } = require('../groups/metadata');
 
 const BAN_STEP_DELAY_MS = 1200; // rate-limit safety between groups/entries
-const notifiedKicks = new Set();
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -193,25 +192,13 @@ async function handleParticipantAdd(sock, update) {
       try {
         await sock.groupParticipantsUpdate(id, [pJid], 'remove');
         console.log(`[bans] Removed banned contact ${maskNumber(number)} from ${id}`);
-        if (!notifiedKicks.has(number)) {
-          notifiedKicks.add(number);
-          setTimeout(() => notifiedKicks.delete(number), 10000);
-          await sock.sendMessage(id, {
-            text: `🚫 *Banned Contact Removed*\n\n@${number} is in the global blocklist and was removed automatically.`,
-            mentions: [pJid]
-          });
-        }
       } catch (e) {
         console.error(`[bans] Failed to remove ${maskNumber(number)} from ${id}: ${e.message}`);
       }
     } else {
-      // Fallback: bot not admin — lock the group and alert admins
+      // Fallback: bot not admin — lock the group without sending a message.
       try {
         await sock.groupSettingUpdate(id, 'announcement');
-        await sock.sendMessage(id, {
-          text: `🚫 *Blocked Number Alert*\n\n@${number} is in the global blocklist.\n\nThe group has been locked for protection.\n\nReview and decide: Remove from blocklist or kick the user.`,
-          mentions: [pJid]
-        });
       } catch (e) {
         console.error(`[bans] Cannot remove ${maskNumber(number)} from ${id}: bot is not admin`);
       }

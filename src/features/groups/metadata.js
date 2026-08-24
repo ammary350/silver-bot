@@ -8,6 +8,14 @@ const jidUtils = require('../../core/jid');
 const groupMetadataCache = new Map();
 const CACHE_TTL = 60000;
 
+const cacheMetadata = (groupId, data) => {
+  const previous = groupMetadataCache.get(groupId);
+  if (previous?.timer) clearTimeout(previous.timer);
+  const timer = setTimeout(() => groupMetadataCache.delete(groupId), CACHE_TTL);
+  timer.unref?.();
+  groupMetadataCache.set(groupId, { data, timestamp: Date.now(), timer });
+};
+
 // Cached group metadata getter with rate limit handling (for non-admin checks)
 const getCachedGroupMetadata = async (sock, groupId) => {
   try {
@@ -26,10 +34,7 @@ const getCachedGroupMetadata = async (sock, groupId) => {
     const metadata = await sock.groupMetadata(groupId);
 
     // Cache it
-    groupMetadataCache.set(groupId, {
-      data: metadata,
-      timestamp: Date.now()
-    });
+    cacheMetadata(groupId, metadata);
 
     return metadata;
   } catch (error) {
@@ -42,10 +47,7 @@ const getCachedGroupMetadata = async (sock, groupId) => {
       error.data === 403
     )) {
       // Cache null for forbidden groups to prevent repeated attempts
-      groupMetadataCache.set(groupId, {
-        data: null,
-        timestamp: Date.now()
-      });
+      cacheMetadata(groupId, null);
       return null; // Silently return null for forbidden groups
     }
 
@@ -76,10 +78,7 @@ const getLiveGroupMetadata = async (sock, groupId) => {
     const metadata = await sock.groupMetadata(groupId);
 
     // Update cache for other features (antilink, welcome, etc.)
-    groupMetadataCache.set(groupId, {
-      data: metadata,
-      timestamp: Date.now()
-    });
+    cacheMetadata(groupId, metadata);
 
     return metadata;
   } catch (error) {

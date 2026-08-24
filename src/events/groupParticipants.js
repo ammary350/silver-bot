@@ -8,9 +8,13 @@ const { handleParticipantUpdate } = require('../features/linkhub');
 
 function registerGroupParticipantsEvents(sock, ctx) {
   sock.ev.on('group-participants.update', async (update) => {
-    await handler.handleGroupUpdate(sock, update);
-    await handleParticipantAdd(sock, update);
-    await handleParticipantUpdate(sock, update);
+    try {
+      await handler.handleGroupUpdate(sock, update);
+      await handleParticipantAdd(sock, update);
+      await handleParticipantUpdate(sock, update);
+    } catch (error) {
+      console.error('[events] group participant update failed:', error.message);
+    }
   });
 }
 

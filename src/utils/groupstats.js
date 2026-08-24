@@ -4,8 +4,12 @@ const path = require('path');
 const statsPath = path.join(__dirname, '..', '..', 'data', 'groupStats.json');
 
 const ensureStatsFile = () => {
-  if (!fs.existsSync(statsPath)) {
-    fs.writeFileSync(statsPath, JSON.stringify({}), 'utf-8');
+  try {
+    if (!fs.existsSync(statsPath)) fs.writeFileSync(statsPath, JSON.stringify({}), 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('[groupstats] unable to initialize stats file:', error.message);
+    return false;
   }
 };
 
@@ -19,8 +23,14 @@ const loadStats = () => {
 };
 
 const saveStats = (data) => {
-  ensureStatsFile();
-  fs.writeFileSync(statsPath, JSON.stringify(data, null, 2), 'utf-8');
+  try {
+    if (!ensureStatsFile()) return false;
+    fs.writeFileSync(statsPath, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('[groupstats] unable to save stats:', error.message);
+    return false;
+  }
 };
 
 const getToday = () => {
@@ -28,14 +38,18 @@ const getToday = () => {
 };
 
 const addMessage = (groupId, userId) => {
-  const data = loadStats();
-  const today = getToday();
-  if (!data[groupId]) data[groupId] = {};
-  if (!data[groupId][today]) data[groupId][today] = { total: 0, users: {} };
-  data[groupId][today].total += 1;
-  if (!data[groupId][today].users[userId]) data[groupId][today].users[userId] = 0;
-  data[groupId][today].users[userId] += 1;
-  saveStats(data);
+  try {
+    const data = loadStats();
+    const today = getToday();
+    if (!data[groupId]) data[groupId] = {};
+    if (!data[groupId][today]) data[groupId][today] = { total: 0, users: {} };
+    data[groupId][today].total += 1;
+    if (!data[groupId][today].users[userId]) data[groupId][today].users[userId] = 0;
+    data[groupId][today].users[userId] += 1;
+    saveStats(data);
+  } catch (error) {
+    console.error('[groupstats] unable to record message:', error.message);
+  }
 };
 
 const getStats = (groupId) => {

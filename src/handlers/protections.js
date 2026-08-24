@@ -145,6 +145,7 @@ const handleAntiSpam = async (sock, msg, from, sender, groupMetadata) => {
       spamLocks.delete(from);
     }
     groupSpam.delete(sender);
+    if (groupSpam.size === 0) spamTracker.delete(from);
   }
 };
 
@@ -215,6 +216,8 @@ const handlePromotionDetection = async (sock, update, groupSettings) => {
         group: id
       };
       promotionLogs.set(logKey, logEntry);
+      const logTimer = setTimeout(() => promotionLogs.delete(logKey), 10 * 60 * 1000);
+      logTimer.unref?.();
       // Build actor display
       const actorDisplay = actorJid && actorJid !== 'unknown' ? `@${actorJid.split(':')[0].split('@')[0]}` : 'unknown';
       // Send notification showing both sides

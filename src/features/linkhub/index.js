@@ -43,6 +43,8 @@ const createMenu = async (sock, jid, reply) => {
   const sent = await reply(`🔗 *مجموعات البوت*\n\n${text}\n\nأرسل رقماً أو نطاقاً بالرد على هذه الرسالة.`);
   if (sent?.key?.id) {
     menuEntries.set(sent.key.id, { jid, groups, expiresAt: Date.now() + 10 * 60 * 1000 });
+    const timer = setTimeout(() => menuEntries.delete(sent.key.id), 10 * 60 * 1000);
+    timer.unref?.();
   }
 };
 
@@ -62,6 +64,7 @@ const sendSelectedLinks = async (sock, msg, text) => {
   if (!quoted || !stanzaId) return false;
   const entry = menuEntries.get(stanzaId);
   if (!entry || entry.expiresAt < Date.now() || !isHub(msg.key.remoteJid)) return false;
+  menuEntries.delete(stanzaId);
 
   const selection = parseSelection(text, entry.groups.length);
   if (!selection) return false;

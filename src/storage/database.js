@@ -552,7 +552,17 @@ const removeBlockedNumber = (number) => {
   if (!normalized) return { success: false, error: 'invalid number' };
   let entries = readBlocklist();
   const before = entries.length;
-  entries = entries.filter(e => normalizeNumber(e.number) !== normalized);
+  const canonicalJid = `${normalized}@s.whatsapp.net`;
+  entries = entries.filter(e => {
+    const storedNumber = String(e.number || '');
+    const storedJid = String(e.jid || '');
+    return storedNumber !== normalized &&
+      storedNumber !== canonicalJid &&
+      storedJid !== normalized &&
+      storedJid !== canonicalJid &&
+      normalizeNumber(storedNumber) !== normalized &&
+      normalizeNumber(storedJid) !== normalized;
+  });
   if (entries.length === before) return { success: false, error: 'not found' };
   writeBlocklist(entries);
   return { success: true };

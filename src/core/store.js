@@ -6,12 +6,18 @@
 const store = {
   messages: new Map(),
   maxPerChat: 20,
+  maxChats: 500,
   bind: (ev) => {
     ev.on('messages.upsert', ({ messages }) => {
       for (const msg of messages) {
         if (!msg.key?.id) continue;
         const jid = msg.key.remoteJid;
-        if (!store.messages.has(jid)) store.messages.set(jid, new Map());
+        if (!store.messages.has(jid)) {
+          store.messages.set(jid, new Map());
+          while (store.messages.size > store.maxChats) {
+            store.messages.delete(store.messages.keys().next().value);
+          }
+        }
         const chatMsgs = store.messages.get(jid);
         chatMsgs.set(msg.key.id, msg);
         if (chatMsgs.size > store.maxPerChat) {

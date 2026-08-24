@@ -55,16 +55,21 @@ module.exports = {
       return extra.reply(`❌ تعذر جلب إحصائيات المجموعات: ${error.message}`);
     }
     const list = Object.values(groups || {});
-    const validGroups = [];
-
-    for (const group of list) {
-      if (await isValidBotGroup(sock, group)) {
-        validGroups.push(group);
-      }
-    }
+    const results = await Promise.allSettled(list.map(async group => ({
+      group,
+      valid: await isValidBotGroup(sock, group)
+    })));
+    const validGroups = results
+      .filter(result => result.status === 'fulfilled' && result.value.valid)
+      .map(result => result.value.group);
 
     const lines = validGroups.map(group => {
-      const settings = database.getGroupSettings(group.id);
+      let settings = {};
+      try {
+        settings = database.getGroupSettings(group.id) || {};
+      } catch (error) {
+        console.error('[botstats] group settings unavailable:', error.message);
+      }
       const icon = key => settings[key] ? '✅' : '❌';
       return `• ${group.subject || group.id}\n  Anti-Link ${icon('antilink')} | Anti-Spam ${icon('antispam')} | Anti-Tag ${icon('antitag')} | Anti-Word ${icon('antiword')}\n  Anti-Contact ✅ (global) | Anti-Delete ${icon('antidelete')}`;
     });

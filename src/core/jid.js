@@ -4,6 +4,13 @@ const config = require('../config');
 const { jidDecode, jidEncode } = require('@whiskeysockets/baileys');
 
 const lidMappingCache = new Map();
+const LID_CACHE_TTL = 10 * 60 * 1000;
+
+const cacheLidMapping = (key, value) => {
+  lidMappingCache.set(key, value);
+  const timer = setTimeout(() => lidMappingCache.delete(key), LID_CACHE_TTL);
+  timer.unref?.();
+};
 
 const normalizeJid = (jid) => {
   if (!jid || typeof jid !== 'string') return null;
@@ -22,10 +29,10 @@ const getLidMappingValue = (user, direction) => {
   try {
     const raw = fs.readFileSync(filePath, 'utf8').trim();
     const value = raw ? JSON.parse(raw) : null;
-    lidMappingCache.set(cacheKey, value || null);
+    cacheLidMapping(cacheKey, value || null);
     return value || null;
   } catch {
-    lidMappingCache.set(cacheKey, null);
+    cacheLidMapping(cacheKey, null);
     return null;
   }
 };
