@@ -4,7 +4,7 @@ const menuSections = {
   general: {
     icon: '🧭',
     label: 'عام',
-    cmds: ['menu', 'ping', 'owner', 'alive', 'status', 'uptime', 'sticker', 'tts', 'qr', 'attp', 'getpp', 'viewonce', 'chat', 'botstats', 'astats', 'setstatsgroup']
+    cmds: ['menu', 'ping', 'owner', 'alive', 'status', 'uptime', 'sticker', 'tts', 'qr', 'attp', 'getpp', 'viewonce', 'chat', 'botstats', 'setstatsgroup']
   },
   roles: {
     icon: '👤',
