@@ -1,4 +1,5 @@
 const linkhub = require('../../src/features/linkhub');
+const permissions = require('../../src/core/permissions');
 
 module.exports = {
   name: 'links',
@@ -7,8 +8,9 @@ module.exports = {
   groupOnly: true,
   async execute(sock, msg, args, extra) {
     try {
-      if (!linkhub.isHub(extra.from)) {
-        return extra.reply('❌ This command can only be used in the configured link-setup group.');
+      const isHubGroup = linkhub.isHub(extra.from);
+      if (!isHubGroup && !permissions.isOwner(extra.sender)) {
+        return extra.reply('❌ This command is only available to the owner outside the link hub.');
       }
       await sock.sendMessage(extra.from, { text: '⏳ جاري البحث...' }, { quoted: msg });
       return await linkhub.createMenu(sock, extra.from, extra.reply);

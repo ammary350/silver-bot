@@ -1,5 +1,6 @@
 const database = require('../../storage/database');
 const { findParticipant } = require('../../core/jid');
+const permissions = require('../../core/permissions');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const HUB_SETTING = 'exclusiveAdminHub';
@@ -44,13 +45,15 @@ const isBotAdminInMetadata = (sock, metadata) => {
 
 const createMenu = async (sock, jid, reply) => {
   const groups = [];
-  for (const group of await getTrackedGroups(sock)) {
+  for (const groupId of database.getConfiguredGroupIds()) {
+    if (!groupId || !groupId.endsWith('@g.us')) continue;
     try {
-      const metadata = group.participants ? group : await sock.groupMetadata(group.id);
-      const groupName = metadata?.subject || group.subject || group.id;
-      groups.push({ jid: group.id, subject: groupName, isAdmin: Boolean(metadata && isBotAdminInMetadata(sock, metadata)) });
+      const metadata = await sock.groupMetadata(groupId);
+      const groupName = metadata?.subject || groupId;
+      groups.push({ jid: groupId, subject: groupName, isAdmin: isBotAdminInMetadata(sock, metadata) });
     } catch (error) {
       console.error('[linkhub] unable to fetch group metadata:', error.message);
+      groups.push({ jid: groupId, subject: groupId, isAdmin: false });
     }
   }
 
@@ -79,11 +82,13 @@ const sendSelectedLinks = async (sock, msg, text) => {
   const stanzaId = msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
   if (!quoted || !stanzaId) return false;
   const entry = menuEntries.get(stanzaId);
-  if (!entry || entry.expiresAt < Date.now() || !isHub(msg.key.remoteJid)) return false;
-  menuEntries.delete(stanzaId);
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const isAuthorizedContext = isHub(msg.key.remoteJid) || permissions.isOwner(sender);
+  if (!entry || entry.expiresAt < Date.now() || !isAuthorizedContext) return false;
 
   const selectedIndex = parseSelection(text, entry.groups.length);
   if (selectedIndex === null) return false;
+  menuEntries.delete(stanzaId);
 
   const selectedGroup = entry.groups[selectedIndex];
   let metadata;
