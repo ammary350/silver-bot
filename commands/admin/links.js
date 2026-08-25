@@ -10,6 +10,7 @@ module.exports = {
       if (!linkhub.isHub(extra.from)) {
         return extra.reply('❌ This command can only be used in the configured link-setup group.');
       }
+      await sock.sendMessage(extra.from, { text: '⏳ جاري البحث...' }, { quoted: msg });
       return await linkhub.createMenu(sock, extra.from, extra.reply);
     } catch (error) {
       console.error('[links error]', error.message);

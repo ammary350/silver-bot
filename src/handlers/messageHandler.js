@@ -331,7 +331,7 @@ const handleMessage = async (sock, msg) => {
     const command = commands.get(commandName);
     if (!command) return;
 
-    // `links` is the one command whose permission is controlled by hub location.
+    // The configured link hub is intentionally public, including in self mode.
     if (commandName === 'links' && isGroup && linkhub.isHub(from)) {
       return command.execute(sock, msg, args, {
         from,
