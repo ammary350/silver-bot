@@ -2,14 +2,11 @@ const normalizeJid = value => String(value || '').split(':')[0].toLowerCase();
 const digitsOnly = value => String(value || '').replace(/\D/g, '');
 
 const getBotParticipant = (sock, group) => {
-  const botIds = [sock.user?.id, sock.user?.lid].filter(Boolean);
-  const botJids = new Set(botIds.map(normalizeJid));
-  const botNumbers = new Set(botIds.map(digitsOnly).filter(Boolean));
-  return (group?.participants || []).find(participant => {
-    const participantIds = [participant.id, participant.jid, participant.participant, participant.userJid]
-      .filter(Boolean);
-    return participantIds.some(id => botJids.has(normalizeJid(id)) || botNumbers.has(digitsOnly(id)));
-  });
+  const botId = String(sock.user?.id || '').split(':')[0].split('@')[0];
+  const botJid = botId ? `${botId}@s.whatsapp.net` : '';
+  return (group?.participants || []).find(participant =>
+    [participant.id, participant.jid, participant.participant, participant.userJid].includes(botJid)
+  );
 };
 
 module.exports = {
@@ -29,10 +26,10 @@ module.exports = {
             isAdmin
           };
         })
-        .sort((first, second) => Number(first.isAdmin) - Number(second.isAdmin));
+        .filter(status => !status.isAdmin);
 
-      const lines = statuses.map(status => `${status.name} - Bot is Admin: ${status.isAdmin ? '✅' : '❌'}`);
-      return extra.reply(lines.join('\n') || 'No groups found.');
+      const lines = statuses.map(status => `${status.name} - ❌ Needs Admin`);
+      return extra.reply(lines.join('\n') || '✅ البوت مشرف في جميع المجموعات ولا توجد أي مشاكل.');
     } catch (error) {
       console.error('[botstats error]', error.message);
       return extra.reply(`❌ تعذر جلب إحصائيات المجموعات: ${error.message}`);

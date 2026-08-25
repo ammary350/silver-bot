@@ -1,6 +1,7 @@
 const database = require('../../storage/database');
 const { findParticipant } = require('../../core/jid');
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const HUB_SETTING = 'exclusiveAdminHub';
 const menuEntries = new Map();
 
