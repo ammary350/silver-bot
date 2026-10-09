@@ -12,6 +12,17 @@ const pairing = require('../features/pairing/pairing');
 const { enforceAllBans } = require('../features/bans/enforcer');
 const handler = require('../handlers');
 const { DisconnectReason } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
+
+process.on('uncaughtException', (error) => {
+  console.error('[system] Uncaught exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('[system] Unhandled rejection:', error);
+  process.exit(1);
+});
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
 
@@ -156,6 +167,13 @@ function registerConnectionEvents(sock, ctx) {
 
       console.log(`[disconnect] Connection closed. Reason: ${reasonName}`);
       if (errorMessage && !errorMessage.includes('rate-overlimit')) console.log(`[disconnect] Error: ${errorMessage}`);
+
+      const shouldReconnect = !(lastDisconnect?.error instanceof Boom &&
+        lastDisconnect.error.output.statusCode === DisconnectReason.loggedOut);
+      if (!shouldReconnect) {
+        console.log('[disconnect] Fatal disconnect reason. Exiting for process manager restart.');
+        process.exit(1);
+      }
 
       // ── Logged out permanently — fresh login required ──
       if (statusCode === DisconnectReason.loggedOut) {

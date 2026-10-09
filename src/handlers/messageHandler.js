@@ -181,6 +181,11 @@ const handleMessage = async (sock, msg) => {
 
     body = (body || '').trim();
 
+    const gameCommand = commands.get('ابداء');
+    if (gameCommand && await gameCommand.handleMessage(sock, msg, body, { from, sender, isGroup, groupMetadata })) return;
+    const menuCommand = commands.get('menu');
+    if (menuCommand && await menuCommand.handleMessage(sock, msg, body, { from, sender, isGroup, groupMetadata })) return;
+
     // The hub menu is intentionally available to every participant in the hub.
     if (isGroup && body && await linkhub.sendSelectedLinks(sock, msg, body)) return;
 
@@ -330,6 +335,17 @@ const handleMessage = async (sock, msg) => {
     // Get command
     const command = commands.get(commandName);
     if (!command) return;
+
+    if (commandName === 'ابداء' || commandName === 'ابدأ') {
+      const allowed = perm.isOwner(sender) || perm.isCoOwner(sender) || (isGroup && await isAdmin(sock, sender, from, groupMetadata));
+      if (!allowed) return;
+      return command.execute(sock, msg, args, {
+        from, sender, isGroup, groupMetadata,
+        isAdmin: true,
+        reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
+        react: (emoji) => sock.sendMessage(from, { react: { text: emoji, key: msg.key } })
+      });
+    }
 
     // The configured link hub is intentionally public, including in self mode.
     if (commandName === 'links' && isGroup && linkhub.isHub(from)) {

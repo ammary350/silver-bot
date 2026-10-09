@@ -1,4 +1,5 @@
 const config = require('../../config');
+const menuChats = new Set();
 
 const menuSections = {
   general: {
@@ -49,27 +50,24 @@ module.exports = {
     try {
       const prefix = config.prefix;
 
+      if (args[0] === '3') {
+        return sock.sendMessage(extra.from, {
+          text: `🎮 قسم الفعاليات\n\nالأمر الأساسي: ${prefix}ابداء [النوع] [عدد الجولات]\n(الأنواع: تفكيك، كتابة، احزر، المليون)`
+        }, { quoted: msg });
+      }
+
+      menuChats.add(extra.from);
+
       const allCmds = Object.values(menuSections).reduce((acc, s) => acc.concat(s.cmds), []);
       const totalCount = allCmds.length;
 
-      let menuText = `╭━━『 *${config.botName}* 』━━╮\n\n`;
-      menuText += `👋 مرحبا @${extra.sender.split('@')[0]}!\n\n`;
-      menuText += `⚡ البادئة: ${prefix}\n`;
-      menuText += `📦 إجمالي الأوامر: ${totalCount}\n\n`;
-
-      for (const [key, section] of Object.entries(menuSections)) {
-        menuText += `┏━━━━━━━━━━━━━━━━━\n`;
-        menuText += `┃ ${section.icon} ${section.label}\n`;
-        menuText += `┗━━━━━━━━━━━━━━━━━\n`;
-        section.cmds.forEach(cmd => {
-          menuText += `│ ➜ ${prefix}${cmd}\n`;
-        });
-        menuText += `\n`;
-      }
-
-      menuText += `╰━━━━━━━━━━━━━━━━━\n\n`;
-      menuText += `💡 اكتب ${prefix}help <command> لمزيد من المعلومات\n`;
-      menuText += `🌟 إصدار البوت: 1.0.0\n`;
+      const menuText = `╭━━『 *${config.botName}* 』━━╮\n\n` +
+        `👋 مرحبا @${extra.sender.split('@')[0]}!\n\n` +
+        `1. 🛡️ قسم الحماية والإدارة\n` +
+        `2. ⚙️ الإعدادات\n` +
+        `3. 🎮 قسم الفعاليات\n` +
+        `4. 🔗 قسم الروابط\n\n` +
+        `أرسل رقم القسم لعرض محتواه.`;
 
       const fs = require('fs');
       const path = require('path');
@@ -91,5 +89,15 @@ module.exports = {
     } catch (error) {
       await extra.reply(`❌ خطأ: ${error.message}`);
     }
+  }
+,
+
+  async handleMessage(sock, msg, body, extra) {
+    if (body !== '3' || !menuChats.has(extra.from)) return false;
+    menuChats.delete(extra.from);
+    await sock.sendMessage(extra.from, {
+      text: `🎮 قسم الفعاليات\n\nالأمر الأساسي: ${config.prefix}ابداء [النوع] [عدد الجولات]\n(الأنواع: تفكيك، كتابة، احزر، المليون)`
+    }, { quoted: msg });
+    return true;
   }
 };
