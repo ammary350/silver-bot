@@ -325,8 +325,9 @@ const handleMessage = async (sock, msg) => {
       }
     }
 
-    // Check if message starts with prefix
-    if (!body.startsWith(config.prefix)) return;
+    // Active games consume raw answers, including plain text and numbers.
+    const gameActive = gameCommand?.isActiveGame?.() === true;
+    if (!body.startsWith(config.prefix) && !gameActive) return;
 
     // Parse command
     const args = body.slice(config.prefix.length).trim().split(/\s+/);

@@ -92,6 +92,8 @@ const handleMessage = async (sock, msg, body, extra) => {
   return true;
 };
 
+const isActiveGame = () => Boolean(globalActiveGame);
+
 module.exports = {
   name: 'ابداء',
   aliases: ['ابدأ'],
@@ -100,6 +102,7 @@ module.exports = {
   adminOnly: true,
   execute: startGame,
   handleMessage,
+  isActiveGame,
   normalizeArabic,
   sendHumanMessage
 };

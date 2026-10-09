@@ -111,11 +111,11 @@ async function main() {
     assert(!/212722838422|212750038790|249124050708/.test(replyText), '.owner reply leaks numbers');
     ok(`.owner sent ${contacts.contacts.length} valid vCard(s), reply number-free`);
     const cfgNumbers = Array.isArray(config.ownerNumber) ? config.ownerNumber : [config.ownerNumber];
-    assert.deepStrictEqual(cfgNumbers, ['212722838422', '212750038790'], 'owner numbers changed!');
-    ok('owner numbers unchanged (config)');
+    assert.deepStrictEqual(cfgNumbers, ['212750038790'], 'owner numbers changed!');
+    ok('configured owner numbers match expected config');
     const vc = contacts.contacts[0].vcard;
-    assert(vc.includes('waid=212722838422:212722838422'), 'vCard uses normalized owner number');
-    ok('vCard waid uses existing owner number');
+    assert(vc.includes('waid=212750038790:212750038790'), 'vCard uses normalized owner number');
+    ok('vCard waid uses configured owner number');
   }
 
   // 3) detc toggle
@@ -478,7 +478,7 @@ async function main() {
     ok('success message matches spec');
 
     // owners + bot identity untouched
-    assert(Array.isArray(config.ownerNumber) && config.ownerNumber.length === 2 && config.ownerNumber[0] === '212722838422' && config.ownerNumber[1] === '212750038790', 'owner config changed!');
+    assert(Array.isArray(config.ownerNumber) && config.ownerNumber.length === 1 && config.ownerNumber[0] === '212750038790', 'owner config changed!');
     assert(database.getBotNumber() === '249124050708', 'bot identity changed!');
     ok('configured owners + bot identity preserved');
 
@@ -503,8 +503,7 @@ async function main() {
       subject: 'Roles After Reset',
       participants: [
         { id: '249124050708@s.whatsapp.net', admin: 'admin' },
-        { id: `${config.ownerNumber[0]}@s.whatsapp.net`, admin: 'admin' },
-        { id: `${config.ownerNumber[1]}@s.whatsapp.net`, admin: null }
+        { id: `${config.ownerNumber[0]}@s.whatsapp.net`, admin: 'admin' }
       ]
     };
     const sent = [];
@@ -514,7 +513,7 @@ async function main() {
     const rolesCmd = require('./commands/roles/roles');
     await rolesCmd.execute(rSock, cardMsg(), [], { from: GROUP, sender: OWNER_JID, isGroup: true, groupMetadata: rolesMeta, reply: async () => {}, react: async () => {} });
     const text = (sent.find(c => c.text) || {}).text || '';
-    assert(text.includes(`@${config.ownerNumber[0]}`) && text.includes(`@${config.ownerNumber[1]}`), 'owners missing after reset');
+    assert(text.includes(`@${config.ownerNumber[0]}`), 'owner missing after reset');
     assert(!text.includes('212760000001') && !text.includes('212770000001'), 'cleared identities still listed');
     assert(!text.includes('@212770000001') && !text.includes('@212760000001'), 'cleared identities mentioned');
     ok('.roles after reset: configured owners only, no cleared identities');
