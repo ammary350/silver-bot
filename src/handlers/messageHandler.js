@@ -327,7 +327,8 @@ const handleMessage = async (sock, msg) => {
 
     // Active games consume raw answers, including plain text and numbers.
     const gameActive = gameCommand?.isActiveGame?.() === true;
-    if (!body.startsWith(config.prefix) && !gameActive) return;
+    const menuActive = menuCommand?.isActiveMenu?.(from) === true;
+    if (!body.startsWith(config.prefix) && !gameActive && !menuActive) return;
 
     // Parse command
     const args = body.slice(config.prefix.length).trim().split(/\s+/);

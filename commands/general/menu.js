@@ -39,6 +39,17 @@ const menuSections = {
   }
 };
 
+const menuChoices = {
+  '1': ['admin', 'protection'],
+  '2': ['general', 'roles', 'owner', 'ai', 'utility'],
+  '4': ['admin']
+};
+
+const formatSection = (sectionName) => {
+  const section = menuSections[sectionName];
+  return `${section.icon} ${section.label}\n${section.cmds.map(command => `${config.prefix}${command}`).join('  ')}`;
+};
+
 module.exports = {
   name: 'menu',
   aliases: ['help', 'commands'],
@@ -93,11 +104,22 @@ module.exports = {
 ,
 
   async handleMessage(sock, msg, body, extra) {
-    if (body !== '3' || !menuChats.has(extra.from)) return false;
+    if (!menuChats.has(extra.from) || !['1', '2', '3', '4'].includes(body)) return false;
     menuChats.delete(extra.from);
+
+    if (body !== '3') {
+      const sections = menuChoices[body] || [];
+      await sock.sendMessage(extra.from, {
+        text: sections.map(formatSection).join('\n\n')
+      }, { quoted: msg });
+      return true;
+    }
+
     await sock.sendMessage(extra.from, {
       text: `🎮 قسم الفعاليات\n\nالأمر الأساسي: ${config.prefix}ابداء [النوع] [عدد الجولات]\n(الأنواع: تفكيك، كتابة، احزر، المليون)`
     }, { quoted: msg });
     return true;
-  }
+  },
+
+  isActiveMenu: (chat) => menuChats.has(chat)
 };
