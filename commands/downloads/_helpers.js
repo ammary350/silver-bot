@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 const DOWNLOAD_ERROR = '❌ يتعذر إرسال الفيديو أو المقطع حالياً، قد يكون الرابط خاطئاً أو الخدمة متوقفة.';
+const DOWNLOAD_SIGNATURE = '`by hawks bot`';
 
 global.allowedDownloadGroups = global.allowedDownloadGroups || new Set();
 
@@ -61,7 +62,11 @@ const downloadBuffer = async (url, responseType = 'arraybuffer') => {
 
 const sendRemoteMedia = async (sock, msg, extra, url, type, mimetype) => {
   const buffer = await downloadBuffer(url);
-  await sock.sendMessage(extra.from, { [type]: buffer, mimetype }, { quoted: msg });
+  await sock.sendMessage(extra.from, {
+    [type]: buffer,
+    mimetype,
+    caption: DOWNLOAD_SIGNATURE,
+  }, { quoted: msg });
 };
 
 const sendDownloadError = async (extra, error, commandName) => {
@@ -71,6 +76,7 @@ const sendDownloadError = async (extra, error, commandName) => {
 
 module.exports = {
   DOWNLOAD_ERROR,
+  DOWNLOAD_SIGNATURE,
   requireDownloadAccess,
   requestJson,
   findUrl,
