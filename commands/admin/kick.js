@@ -97,6 +97,9 @@ module.exports = {
         return;
       }
       
+      if (!extra.isBotAdmin) {
+        return extra.reply('⚠️ لا أملك صلاحية المشرف لطرد هذا العضو');
+      }
       await sock.groupParticipantsUpdate(chatId, usersToKick, 'remove');
       
       const usernames = usersToKick.map((jid) => `@${jid.split('@')[0]}`);

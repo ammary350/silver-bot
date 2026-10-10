@@ -53,6 +53,9 @@ async function createSocket({ auth }) {
     syncFullHistory: false,
     downloadHistory: false,
     markOnlineOnConnect: false,
+    keepAliveIntervalMs: 20000,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
     getMessage: async () => undefined
   });
 

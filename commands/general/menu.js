@@ -3,37 +3,30 @@ const menuChats = new Set();
 
 const menuSections = {
   general: {
-    icon: '🧭',
     label: 'عام',
     cmds: ['menu', 'ping', 'owner', 'alive', 'status', 'uptime', 'sticker', 'tts', 'qr', 'attp', 'getpp', 'viewonce', 'chat', 'botstats', 'setstatsgroup']
   },
   roles: {
-    icon: '👤',
     label: 'الرتب',
     cmds: ['addadm', 'deladm', 'addco', 'delco', 'roles', 'resetroles']
   },
   admin: {
-    icon: '🛡️',
     label: 'الإدارة',
     cmds: ['kick', 'promote', 'demote', 'mute', 'unmute', 'warn', 'resetwarn', 'tagall', 'hidetag', 'antilink', 'antitag', 'antiacc', 'welcome', 'setwelcome', 'goodbye', 'setgoodbye', 'clean', 'delete', 'grouplink', 'ginfo', 'setrules', 'reqs', 'approveall', 'setreqmsg', 'linksetup', 'links', 'linkhide']
   },
   protection: {
-    icon: '🔒',
     label: 'الحماية',
     cmds: ['detc', 'antiword', 'addword', 'delword', 'antispam', 'spamlimit', 'spamtime', 'antidelete', 'lock', 'unlock', 'panic', 'rules', 'scan']
   },
   owner: {
-    icon: '👑',
     label: 'المالك',
     cmds: ['ban', 'in', 'mode', 'broadcast', 'restart', 'disconnect', 'setprefix', 'setbotname', 'setbotpp', 'setmenuimage', 'anticall', 'autoreact', 'update', 'addblock', 'delblock', 'blocks', 'check', 'dailyreport', 'resetroles']
   },
   ai: {
-    icon: '🤖',
     label: 'الذكاء الاصطناعي',
     cmds: ['ai', 'gptimage', 'imagine']
   },
   utility: {
-    icon: '🔧',
     label: 'أدوات',
     cmds: ['translate', 'calc', 'weather']
   }
@@ -47,7 +40,7 @@ const menuChoices = {
 
 const formatSection = (sectionName) => {
   const section = menuSections[sectionName];
-  return `${section.icon} ${section.label}\n${section.cmds.map(command => `${config.prefix}${command}`).join('  ')}`;
+  return `${section.label}\n${section.cmds.map(command => `- ${config.prefix}${command}`).join('\n')}`;
 };
 
 module.exports = {
@@ -63,7 +56,7 @@ module.exports = {
 
       if (args[0] === '3') {
         return sock.sendMessage(extra.from, {
-          text: `🎮 قسم الفعاليات\n\nالأمر الأساسي: ${prefix}ابداء [النوع] [عدد الجولات]\n(الأنواع: تفكيك، كتابة، احزر، المليون)`
+          text: `قسم الفعاليات\n\n- الأمر الأساسي: ${prefix}ابداء [النوع] [عدد الجولات]\n- الأنواع: تفكيك، كتابة، احزر، المليون`
         }, { quoted: msg });
       }
 
@@ -72,12 +65,11 @@ module.exports = {
       const allCmds = Object.values(menuSections).reduce((acc, s) => acc.concat(s.cmds), []);
       const totalCount = allCmds.length;
 
-      const menuText = `╭━━『 *${config.botName}* 』━━╮\n\n` +
-        `👋 مرحبا @${extra.sender.split('@')[0]}!\n\n` +
-        `1. 🛡️ قسم الحماية والإدارة\n` +
-        `2. ⚙️ الإعدادات\n` +
-        `3. 🎮 قسم الفعاليات\n` +
-        `4. 🔗 قسم الروابط\n\n` +
+      const menuText = `| ${config.botName} |\n\n` +
+        `مرحبا @${extra.sender.split('@')[0]}!\n\n` +
+        `1. قسم الحماية والإدارة\n` +
+        `2. الإعدادات\n` +
+        `3. قسم الفعاليات\n\n` +
         `أرسل رقم القسم لعرض محتواه.`;
 
       const fs = require('fs');
@@ -98,7 +90,7 @@ module.exports = {
         }, { quoted: msg });
       }
     } catch (error) {
-      await extra.reply(`❌ خطأ: ${error.message}`);
+      await extra.reply(`خطأ: ${error.message}`);
     }
   }
 ,
@@ -116,7 +108,7 @@ module.exports = {
     }
 
     await sock.sendMessage(extra.from, {
-      text: `🎮 قسم الفعاليات\n\nالأمر الأساسي: ${config.prefix}ابداء [النوع] [عدد الجولات]\n(الأنواع: تفكيك، كتابة، احزر، المليون)`
+      text: `قسم الفعاليات\n\n- الأمر الأساسي: ${config.prefix}ابداء [النوع] [عدد الجولات]\n- الأنواع: تفكيك، كتابة، احزر، المليون`
     }, { quoted: msg });
     return true;
   },

@@ -47,14 +47,7 @@ const createMenu = async (sock, jid, reply) => {
   const groups = [];
   for (const groupId of database.getConfiguredGroupIds()) {
     if (!groupId || !groupId.endsWith('@g.us')) continue;
-    try {
-      const metadata = await sock.groupMetadata(groupId);
-      const groupName = metadata?.subject || groupId;
-      groups.push({ jid: groupId, subject: groupName, isAdmin: isBotAdminInMetadata(sock, metadata) });
-    } catch (error) {
-      console.error('[linkhub] unable to fetch group metadata:', error.message);
-      groups.push({ jid: groupId, subject: groupId, isAdmin: false });
-    }
+    groups.push({ jid: groupId, subject: groupId, isAdmin: false });
   }
 
   if (!groups.length) return reply('لا توجد مجموعات مسجلة.');

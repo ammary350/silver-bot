@@ -151,6 +151,7 @@ function registerConnectionEvents(sock, ctx) {
 
     // ── Disconnected ──
     if (connection === 'close') {
+      if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) process.exit(1);
       if (ctx.getIsShuttingDown()) {
         console.log('[disconnect] Shutdown in progress, not reconnecting');
         return;
