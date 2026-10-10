@@ -185,20 +185,13 @@ const handleMessage = async (sock, msg) => {
     // plain numbers are consumed while a chat has an active game.
     const xoCommand = commands.get('xo');
     if (xoCommand) {
-      if (xoCommand.isActiveGame?.(from) && await xoCommand.handleMessage(
+      if (xoCommand.handleCommand && await xoCommand.handleCommand(
         sock, msg, body, { from, sender, isGroup, groupMetadata, reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }) }
       )) return;
 
-      const xoCommandText = body.toLowerCase();
-      if (xoCommandText === 'xo' || xoCommandText === `${config.prefix}xo`) {
-        return xoCommand.execute(sock, msg, [], {
-          from,
-          sender,
-          isGroup,
-          groupMetadata,
-          reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
-        });
-      }
+      if (xoCommand.isActiveGame?.(from) && await xoCommand.handleMessage(
+        sock, msg, body, { from, sender, isGroup, groupMetadata, reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }) }
+      )) return;
     }
 
     const gameCommand = commands.get('ابداء');
