@@ -371,7 +371,7 @@ const handleMessage = async (sock, msg) => {
     // Only users with an approved bot role can execute commands:
     //   Owner (config) > Co-owner (database) > Bot Admin (database) > Bot User (session)
     // WhatsApp group admin alone does not grant bot command access.
-    if (!perm.hasRole(sender)) {
+    if (!perm.hasRole(sender) && commandName !== 'setdown') {
       return;
     }
 
