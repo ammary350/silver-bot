@@ -16,7 +16,6 @@ const {
   handleAntiAcc
 } = require('./protections');
 const { handleBlockControlMessage } = require('../features/blockctrl');
-const linkhub = require('../features/linkhub');
 
 const commands = loadCommands();
 
@@ -181,13 +180,31 @@ const handleMessage = async (sock, msg) => {
 
     body = (body || '').trim();
 
+    // XO accepts both the configured command prefix and the short "xo" form.
+    // Its move handler must run before the normal prefix and role gates so
+    // plain numbers are consumed while a chat has an active game.
+    const xoCommand = commands.get('xo');
+    if (xoCommand) {
+      if (xoCommand.isActiveGame?.(from) && await xoCommand.handleMessage(
+        sock, msg, body, { from, sender, isGroup, groupMetadata, reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }) }
+      )) return;
+
+      const xoCommandText = body.toLowerCase();
+      if (xoCommandText === 'xo' || xoCommandText === `${config.prefix}xo`) {
+        return xoCommand.execute(sock, msg, [], {
+          from,
+          sender,
+          isGroup,
+          groupMetadata,
+          reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
+        });
+      }
+    }
+
     const gameCommand = commands.get('ابداء');
     if (gameCommand && await gameCommand.handleMessage(sock, msg, body, { from, sender, isGroup, groupMetadata })) return;
     const menuCommand = commands.get('menu');
     if (menuCommand && await menuCommand.handleMessage(sock, msg, body, { from, sender, isGroup, groupMetadata })) return;
-
-    // The hub menu is intentionally available to every participant in the hub.
-    if (isGroup && body && await linkhub.sendSelectedLinks(sock, msg, body)) return;
 
     // Check antiall protection (owner only feature)
     if (isGroup) {
@@ -350,18 +367,6 @@ const handleMessage = async (sock, msg) => {
     }
 
     // The configured link hub is intentionally public, including in self mode.
-    if (commandName === 'links' && isGroup && linkhub.isHub(from)) {
-      return command.execute(sock, msg, args, {
-        from,
-        sender,
-        isGroup,
-        groupMetadata,
-        commandName,
-        reply: (text) => sock.sendMessage(from, { text }, { quoted: msg }),
-        react: (emoji) => sock.sendMessage(from, { react: { text: emoji, key: msg.key } })
-      });
-    }
-
     // ── Mode Context Check ──
     // Private mode: bot only responds to registered role-holders
     // Public mode: role gate below still applies
